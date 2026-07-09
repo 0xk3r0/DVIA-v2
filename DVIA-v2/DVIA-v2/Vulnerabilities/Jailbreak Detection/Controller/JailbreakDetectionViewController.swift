@@ -48,42 +48,6 @@ class JailbreakDetectionViewController: UIViewController {
         let barButton = UIBarButtonItem(customView: button)
         //assign button to navigationbar
         self.navigationItem.leftBarButtonItem = barButton
-        //let o = Obfuscator(withSalt: [AppDelegate.self, NSObject.self, NSString.self])
-        
-//        var bytes = o.bytesByObfuscatingString(string: "/Applications/Cydia.app")
-//        print(bytes)
-//        [116, 5, 38, 57, 45, 54, 21, 83, 90, 40, 31, 30, 55, 74, 47, 28, 3, 8, 21, 75, 77, 80, 62]
-//
-//        bytes = o.bytesByObfuscatingString(string: "/Library/MobileSubstrate/MobileSubstrate.dylib")
-//        print(bytes)
-//        [116, 8, 63, 43, 51, 62, 4, 75, 1, 12, 31, 18, 45, 9, 9, 54, 18, 3, 7, 17, 94, 65, 58, 54, 96, 47, 5, 7, 10, 24, 73, 115, 59, 49, 32, 0, 0, 8, 26, 2, 115, 63, 61, 58, 32, 35]
-//
-//        bytes = o.bytesByObfuscatingString(string: "/bin/bash")
-//        print(bytes)
-//        [116, 38, 63, 39, 110, 61, 23, 65, 70]
-//
-//
-//        bytes = o.bytesByObfuscatingString(string: "/usr/sbin/sshd")
-//        print(bytes)
-//        [116, 49, 37, 59, 110, 44, 20, 91, 64, 110, 3, 3, 44, 1]
-//
-//        bytes = o.bytesByObfuscatingString(string: "/Applications/Cydia.app")
-//        print(bytes)
-//        [116, 5, 38, 57, 45, 54, 21, 83, 90, 40, 31, 30, 55, 74, 47, 28, 3, 8, 21, 75, 77, 80, 62]
-//
-//        bytes = o.bytesByObfuscatingString(string: "/etc/apt")
-//        print(bytes)
-//        [116, 33, 34, 42, 110, 62, 6, 70]
-//
-//        bytes = o.bytesByObfuscatingString(string: "/private/jailbreak.txt")
-//        print(bytes)
-//        [116, 52, 36, 32, 55, 62, 2, 87, 1, 43, 17, 25, 40, 7, 30, 0, 6, 10, 90, 17, 84, 84]
-//
-//        bytes = o.bytesByObfuscatingString(string: "cydia://package/com.example.package")
-//        print(bytes)
-//        [56, 61, 50, 32, 32, 101, 89, 29, 94, 32, 19, 27, 37, 2, 9, 74, 4, 14, 25, 75, 73, 88, 47, 62, 63, 14, 15, 75, 19, 21, 79, 75, 47, 52, 54]
-        
-        // Do any additional setup after loading the view.
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -118,40 +82,66 @@ class JailbreakDetectionViewController: UIViewController {
     @IBAction func jailbreakTest4Tapped(_ sender: Any) {
         var isJailbroken:Bool = false
         #if !SIMULATOR
-            if FileManager.default.fileExists(atPath: "/Applications/Cydia.app") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/Library/MobileSubstrate/MobileSubstrate.dylib") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/bin/bash") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/usr/sbin/sshd") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/etc/apt") {
-                isJailbroken = true
+            let suspiciousPaths = [
+                "/Applications/Cydia.app",
+                "/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/bin/bash",
+                "/usr/sbin/sshd",
+                "/etc/apt",
+                "/var/jb/Applications/Sileo.app",
+                "/var/jb/Applications/Zebra.app",
+                "/var/jb/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/var/jb/usr/lib/TweakInject",
+                "/var/jb/usr/bin/bash",
+                "/var/jb/usr/sbin/sshd",
+                "/var/jb/etc/apt",
+                "/var/jb/",
+                "/usr/lib/libhooker.dylib",
+                "/var/jb/usr/lib/libellekit.dylib"
+            ]
+            
+            for path in suspiciousPaths {
+                if FileManager.default.fileExists(atPath: path) {
+                    isJailbroken = true
+                    break
+                }
             }
             
-            var error: Error?
-            let stringToBeWritten = "This is a test."
-            do {
-                try stringToBeWritten.write(toFile: "/private/jailbreak.txt", atomically: true, encoding: .utf8)
-            } catch let err {
-                error = err
+            if !isJailbroken {
+                do {
+                    let _ = try FileManager.default.destinationOfSymbolicLink(atPath: "/var/jb")
+                    isJailbroken = true
+                } catch {}
             }
             
-            if error == nil {
-                //Device is jailbroken
-                isJailbroken = true
+            if !isJailbroken {
+                var error: Error?
+                let stringToBeWritten = "This is a test."
+                do {
+                    try stringToBeWritten.write(toFile: "/private/jailbreak.txt", atomically: true, encoding: .utf8)
+                } catch let err {
+                    error = err
+                }
+                
+                if error == nil {
+                    isJailbroken = true
+                    try? FileManager.default.removeItem(atPath: "/private/jailbreak.txt")
+                }
             }
-            else {
-                try? FileManager.default.removeItem(atPath: "/private/jailbreak.txt")
-            }
-            if UIApplication.shared.canOpenURL((URL(string: "cydia://package/com.example.package"))!) {
-                //Device is jailbroken
-                isJailbroken = true
+            
+            if !isJailbroken {
+                let suspiciousSchemes = [
+                    "cydia://package/com.example.package",
+                    "sileo://",
+                    "zbra://",
+                    "filza://"
+                ]
+                for scheme in suspiciousSchemes {
+                    if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+                        isJailbroken = true
+                        break
+                    }
+                }
             }
         #endif
         
@@ -176,21 +166,34 @@ class JailbreakDetectionViewController: UIViewController {
     
     func isJailbroken() -> Bool {
         #if !SIMULATOR
-            if FileManager.default.fileExists(atPath: "/Applications/Cydia.app") {
-                return true
+            let suspiciousPaths = [
+                "/Applications/Cydia.app",
+                "/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/bin/bash",
+                "/usr/sbin/sshd",
+                "/etc/apt",
+                "/var/jb/Applications/Sileo.app",
+                "/var/jb/Applications/Zebra.app",
+                "/var/jb/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/var/jb/usr/lib/TweakInject",
+                "/var/jb/usr/bin/bash",
+                "/var/jb/usr/sbin/sshd",
+                "/var/jb/etc/apt",
+                "/var/jb/",
+                "/usr/lib/libhooker.dylib",
+                "/var/jb/usr/lib/libellekit.dylib"
+            ]
+            
+            for path in suspiciousPaths {
+                if FileManager.default.fileExists(atPath: path) {
+                    return true
+                }
             }
-            else if FileManager.default.fileExists(atPath: "/Library/MobileSubstrate/MobileSubstrate.dylib") {
+            
+            do {
+                let _ = try FileManager.default.destinationOfSymbolicLink(atPath: "/var/jb")
                 return true
-            }
-            else if FileManager.default.fileExists(atPath: "/bin/bash") {
-                return true
-            }
-            else if FileManager.default.fileExists(atPath: "/usr/sbin/sshd") {
-                return true
-            }
-            else if FileManager.default.fileExists(atPath: "/etc/apt") {
-                return true
-            }
+            } catch {}
             
             var error: Error?
             let stringToBeWritten = "This is a test."
@@ -201,58 +204,88 @@ class JailbreakDetectionViewController: UIViewController {
             }
             
             if error == nil {
-                //Device is jailbroken
-                return true
-            }
-            else {
                 try? FileManager.default.removeItem(atPath: "/private/jailbreak.txt")
-            }
-            if UIApplication.shared.canOpenURL((URL(string: "cydia://package/com.example.package"))!) {
-                //Device is jailbroken
                 return true
+            }
+            
+            let suspiciousSchemes = [
+                "cydia://package/com.example.package",
+                "sileo://",
+                "zbra://",
+                "filza://"
+            ]
+            for scheme in suspiciousSchemes {
+                if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+                    return true
+                }
             }
         #endif
-        //All checks have failed. Most probably, the device is not jailbroken
         return false
     }
     
     @inline(__always) func jailbreakTest3() {
         var isJailbroken:Bool = false
         #if !SIMULATOR
-            if FileManager.default.fileExists(atPath: "/Applications/Cydia.app") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/Library/MobileSubstrate/MobileSubstrate.dylib") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/bin/bash") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/usr/sbin/sshd") {
-                isJailbroken = true
-            }
-            else if FileManager.default.fileExists(atPath: "/etc/apt") {
-                isJailbroken = true
+            let suspiciousPaths = [
+                "/Applications/Cydia.app",
+                "/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/bin/bash",
+                "/usr/sbin/sshd",
+                "/etc/apt",
+                "/var/jb/Applications/Sileo.app",
+                "/var/jb/Applications/Zebra.app",
+                "/var/jb/Library/MobileSubstrate/MobileSubstrate.dylib",
+                "/var/jb/usr/lib/TweakInject",
+                "/var/jb/usr/bin/bash",
+                "/var/jb/usr/sbin/sshd",
+                "/var/jb/etc/apt",
+                "/var/jb/",
+                "/usr/lib/libhooker.dylib",
+                "/var/jb/usr/lib/libellekit.dylib"
+            ]
+            
+            for path in suspiciousPaths {
+                if FileManager.default.fileExists(atPath: path) {
+                    isJailbroken = true
+                    break
+                }
             }
             
-            var error: Error?
-            let stringToBeWritten = "This is a test."
-            do {
-                try stringToBeWritten.write(toFile: "/private/jailbreak.txt", atomically: true, encoding: .utf8)
-            } catch let err {
-                error = err
+            if !isJailbroken {
+                do {
+                    let _ = try FileManager.default.destinationOfSymbolicLink(atPath: "/var/jb")
+                    isJailbroken = true
+                } catch {}
             }
             
-            if error == nil {
-                //Device is jailbroken
-                isJailbroken = true
+            if !isJailbroken {
+                var error: Error?
+                let stringToBeWritten = "This is a test."
+                do {
+                    try stringToBeWritten.write(toFile: "/private/jailbreak.txt", atomically: true, encoding: .utf8)
+                } catch let err {
+                    error = err
+                }
+                
+                if error == nil {
+                    isJailbroken = true
+                    try? FileManager.default.removeItem(atPath: "/private/jailbreak.txt")
+                }
             }
-            else {
-                try? FileManager.default.removeItem(atPath: "/private/jailbreak.txt")
-            }
-            if UIApplication.shared.canOpenURL((URL(string: "cydia://package/com.example.package"))!) {
-                //Device is jailbroken
-                isJailbroken = true
+            
+            if !isJailbroken {
+                let suspiciousSchemes = [
+                    "cydia://package/com.example.package",
+                    "sileo://",
+                    "zbra://",
+                    "filza://"
+                ]
+                for scheme in suspiciousSchemes {
+                    if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+                        isJailbroken = true
+                        break
+                    }
+                }
             }
         #endif
         

@@ -12,7 +12,6 @@
 //  And this https://www.youtube.com/watch?v=6dHXcoF590E
  
 
-
 #import <Foundation/Foundation.h>
 #import "JailbreakDetection.h"
 
@@ -22,38 +21,69 @@
     
 #if !(TARGET_IPHONE_SIMULATOR)
     
-    if ([[NSFileManager defaultManager] fileExistsAtPath:@"/Applications/Cydia.app"]){
-        return YES;
-    }else if([[NSFileManager defaultManager] fileExistsAtPath:@"/Library/MobileSubstrate/MobileSubstrate.dylib"]){
-        return YES;
-    }else if([[NSFileManager defaultManager] fileExistsAtPath:@"/bin/bash"]){
-        return YES;
-    }else if([[NSFileManager defaultManager] fileExistsAtPath:@"/usr/sbin/sshd"]){
-        return YES;
-    }else if([[NSFileManager defaultManager] fileExistsAtPath:@"/etc/apt"]){
-        return YES;
+    // 1. Array of traditional AND modern rootless paths
+    NSArray *suspiciousPaths = @[
+        // Traditional Rootful Paths
+        @"/Applications/Cydia.app",
+        @"/Library/MobileSubstrate/MobileSubstrate.dylib",
+        @"/bin/bash",
+        @"/usr/sbin/sshd",
+        @"/etc/apt",
+        
+        // Modern Rootless Paths (palera1n, Dopamine, etc.)
+        @"/var/jb/Applications/Sileo.app",
+        @"/var/jb/Applications/Zebra.app",
+        @"/var/jb/Library/MobileSubstrate/MobileSubstrate.dylib",
+        @"/var/jb/usr/lib/TweakInject",
+        @"/var/jb/usr/bin/bash",
+        @"/var/jb/usr/sbin/sshd",
+        @"/var/jb/etc/apt",
+        @"/usr/lib/libhooker.dylib",
+        @"/var/jb/usr/lib/libellekit.dylib"
+    ];
+    
+    for (NSString *path in suspiciousPaths) {
+        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+            return YES;
+        }
     }
     
+    // 2. Symlink Check for Rootless
+    NSError *symlinkError = nil;
+    NSString *symlinkDest = [[NSFileManager defaultManager] destinationOfSymbolicLinkAtPath:@"/var/jb" error:&symlinkError];
+    if (symlinkDest != nil) {
+        return YES; // Highly indicative of a rootless jailbreak
+    }
+    
+    // 3. Sandbox Write Check
     NSError *error;
     NSString *stringToBeWritten = @"This is a test.";
     [stringToBeWritten writeToFile:@"/private/jailbreak.txt" atomically:YES
                           encoding:NSUTF8StringEncoding error:&error];
-    if(error==nil){
-        //Device is jailbroken
-        return YES;
-    } else {
+    if(error == nil){
+        // Device is jailbroken
         [[NSFileManager defaultManager] removeItemAtPath:@"/private/jailbreak.txt" error:nil];
+        return YES;
     }
     
-    if([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"cydia://package/com.example.package"]]){
-        //Device is jailbroken
-        return YES;
+    // 4. Modern URL Scheme Checks
+    NSArray *suspiciousSchemes = @[
+        @"cydia://package/com.example.package",
+        @"sileo://",
+        @"zbra://",
+        @"filza://"
+    ];
+    
+    for (NSString *scheme in suspiciousSchemes) {
+        if ([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:scheme]]) {
+            return YES;
+        }
     }
+    
 #endif
     
-    //All checks have failed. Most probably, the device is not jailbroken
+    // All checks have failed. Most probably, the device is not jailbroken
     return NO;
 }
-
 
 @end
