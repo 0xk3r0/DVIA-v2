@@ -2,7 +2,7 @@ name: Build Unsigned iOS IPA
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -18,13 +18,19 @@ jobs:
         with:
           xcode-version: '15.2'
 
+      - name: Install CocoaPods dependencies
+        working-directory: DVIA-v2
+        run: pod install
+
       - name: Build Unsigned App
+        working-directory: DVIA-v2
         run: |
           xcodebuild clean build \
             -workspace DVIA-v2.xcworkspace \
             -scheme DVIA-v2 \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
