@@ -1,0 +1,46 @@
+name: Build Unsigned iOS IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.2'
+
+      - name: Build Unsigned App
+        run: |
+          xcodebuild clean build \
+            -workspace YourProject.xcworkspace \
+            -scheme YourScheme \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR=$RUNNER_TEMP/build
+
+      - name: Package into IPA
+        run: |
+          cd $RUNNER_TEMP
+          mkdir Payload
+          # Move the compiled .app file into the Payload directory
+          mv build/*.app Payload/
+          # Zip the Payload directory to create the .ipa
+          zip -qr UnsignedApp.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unsigned-iOS-IPA
+          path: ${{ runner.temp }}/UnsignedApp.ipa
