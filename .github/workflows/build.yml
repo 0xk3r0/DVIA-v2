@@ -21,8 +21,8 @@ jobs:
       - name: Build Unsigned App
         run: |
           xcodebuild clean build \
-            -workspace YourProject.xcworkspace \
-            -scheme YourScheme \
+            -workspace DVIA-v2.xcworkspace \
+            -scheme DVIA-v2 \
             -configuration Release \
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
